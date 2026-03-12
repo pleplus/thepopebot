@@ -53,12 +53,6 @@ jobs:
                 git push origin main
               fi
 
-              # Update THEPOPEBOT_VERSION in .env so docker compose pulls the right image
-              if grep -q "^THEPOPEBOT_VERSION=" /app/.env; then
-                sed -i "s/^THEPOPEBOT_VERSION=.*/THEPOPEBOT_VERSION=$NEW_TPB/" /app/.env
-              else
-                echo "THEPOPEBOT_VERSION=$NEW_TPB" >> /app/.env
-              fi
               echo "VERSION_CHANGED" > /app/.rebuild-status
             else
               npm install --omit=dev
