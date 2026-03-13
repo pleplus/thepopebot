@@ -62,7 +62,7 @@ const GROUP_ORDER = ['non-agent', 'agent', 'llm'];
 // Shared row components
 // ─────────────────────────────────────────────────────────────────────────────
 
-function SecretRow({ name, helpText, onUpdate, onDelete }) {
+function SecretRow({ name, helpText, isSet, onUpdate, onDelete }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState('');
   const [saving, setSaving] = useState(false);
@@ -129,7 +129,13 @@ function SecretRow({ name, helpText, onUpdate, onDelete }) {
   return (
     <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between py-3">
       <div className="min-w-0">
-        <div className="text-sm font-medium font-mono">{name}</div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium font-mono">{name}</span>
+          <span className={`inline-flex items-center gap-1 text-xs ${isSet ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${isSet ? 'bg-green-500' : 'bg-muted-foreground/40'}`} />
+            {isSet ? 'Set' : 'Not set'}
+          </span>
+        </div>
         {helpText && <p className="text-xs text-muted-foreground mt-0.5">{helpText}</p>}
         {error && <p className="text-xs text-destructive mt-0.5">{error}</p>}
       </div>
@@ -138,19 +144,21 @@ function SecretRow({ name, helpText, onUpdate, onDelete }) {
           className={`rounded-md px-2.5 py-1.5 text-xs font-medium border ${
             saved ? 'border-green-500 text-green-600' : 'border-border text-muted-foreground hover:bg-accent hover:text-foreground'
           }`}>
-          {saved ? <span className="inline-flex items-center gap-1"><CheckIcon size={12} /> Saved</span> : 'Set'}
+          {saved ? <span className="inline-flex items-center gap-1"><CheckIcon size={12} /> Saved</span> : isSet ? 'Update' : 'Set'}
         </button>
-        <button onClick={handleDelete} disabled={deleting}
-          className="rounded-md p-1.5 text-xs border border-border text-muted-foreground hover:text-destructive hover:border-destructive disabled:opacity-50"
-          title="Delete secret">
-          <TrashIcon size={12} />
-        </button>
+        {isSet && (
+          <button onClick={handleDelete} disabled={deleting}
+            className="rounded-md p-1.5 text-xs border border-border text-muted-foreground hover:text-destructive hover:border-destructive disabled:opacity-50"
+            title="Delete secret">
+            <TrashIcon size={12} />
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
-function VariableRow({ name, onUpdate, onDelete }) {
+function VariableRow({ name, isSet, currentValue, onUpdate, onDelete }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState('');
   const [saving, setSaving] = useState(false);
@@ -207,21 +215,30 @@ function VariableRow({ name, onUpdate, onDelete }) {
   return (
     <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between py-3">
       <div className="min-w-0">
-        <div className="text-sm font-medium font-mono">{name}</div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium font-mono">{name}</span>
+          <span className={`inline-flex items-center gap-1 text-xs ${isSet ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${isSet ? 'bg-green-500' : 'bg-muted-foreground/40'}`} />
+            {isSet ? 'Set' : 'Not set'}
+          </span>
+        </div>
+        {isSet && currentValue && <p className="text-xs text-muted-foreground mt-0.5 font-mono truncate">{currentValue}</p>}
         {error && <p className="text-xs text-destructive mt-0.5">{error}</p>}
       </div>
       <div className="flex items-center gap-1.5 shrink-0 self-start sm:self-auto">
-        <button onClick={() => setEditing(true)}
+        <button onClick={() => { setEditing(true); if (currentValue) setValue(currentValue); }}
           className={`rounded-md px-2.5 py-1.5 text-xs font-medium border ${
             saved ? 'border-green-500 text-green-600' : 'border-border text-muted-foreground hover:bg-accent hover:text-foreground'
           }`}>
-          {saved ? <span className="inline-flex items-center gap-1"><CheckIcon size={12} /> Saved</span> : 'Set'}
+          {saved ? <span className="inline-flex items-center gap-1"><CheckIcon size={12} /> Saved</span> : isSet ? 'Update' : 'Set'}
         </button>
-        <button onClick={handleDelete} disabled={deleting}
-          className="rounded-md p-1.5 text-xs border border-border text-muted-foreground hover:text-destructive hover:border-destructive disabled:opacity-50"
-          title="Delete variable">
-          <TrashIcon size={12} />
-        </button>
+        {isSet && (
+          <button onClick={handleDelete} disabled={deleting}
+            className="rounded-md p-1.5 text-xs border border-border text-muted-foreground hover:text-destructive hover:border-destructive disabled:opacity-50"
+            title="Delete variable">
+            <TrashIcon size={12} />
+          </button>
+        )}
       </div>
     </div>
   );
@@ -647,7 +664,9 @@ export function GitHubSecretsPage() {
   if (data?.error) return <NotConfigured />;
 
   const handleUpdate = async (name, value) => {
-    return await updateGitHubSecret(name, value);
+    const result = await updateGitHubSecret(name, value);
+    if (result?.success) reload();
+    return result;
   };
 
   const handleDelete = async (name) => {
@@ -698,7 +717,7 @@ export function GitHubSecretsPage() {
               <div className="rounded-lg border bg-card p-4">
                 <div className="divide-y divide-border">
                   {secrets.map((s) => (
-                    <SecretRow key={s.name} name={s.name} helpText={getSecretHelp(s.name)} onUpdate={handleUpdate} onDelete={handleDelete} />
+                    <SecretRow key={s.name} name={s.name} isSet={s.isSet} helpText={getSecretHelp(s.name)} onUpdate={handleUpdate} onDelete={handleDelete} />
                   ))}
                 </div>
               </div>
@@ -725,7 +744,9 @@ export function GitHubVariablesPage() {
   if (data?.error) return <NotConfigured />;
 
   const handleUpdate = async (name, value) => {
-    return await updateGitHubVariable(name, value);
+    const result = await updateGitHubVariable(name, value);
+    if (result?.success) reload();
+    return result;
   };
 
   const handleDelete = async (name) => {
@@ -758,7 +779,7 @@ export function GitHubVariablesPage() {
       <div className="rounded-lg border bg-card p-4">
         <div className="divide-y divide-border">
           {data.variables.map((v) => (
-            <VariableRow key={v.name} name={v.name} onUpdate={handleUpdate} onDelete={handleDelete} />
+            <VariableRow key={v.name} name={v.name} isSet={v.isSet} currentValue={v.value} onUpdate={handleUpdate} onDelete={handleDelete} />
           ))}
         </div>
       </div>
