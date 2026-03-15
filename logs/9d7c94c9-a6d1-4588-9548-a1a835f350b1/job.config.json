@@ -1,0 +1,4 @@
+{
+  "title": "A Telegram message was received from @{{body.message.from.first_name}}:",
+  "job": "A Telegram message was received from @{{body.message.from.first_name}}:\n\nMessage: {{body.message.text}}\n\nReply and respond to this message."
+}
