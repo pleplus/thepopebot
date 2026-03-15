@@ -1,0 +1,4 @@
+{
+  "title": "Telegram message received: {{body.message.text}}",
+  "job": "Telegram message received: {{body.message.text}}\nFrom: {{body.message.from.username}}"
+}
